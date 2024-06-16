@@ -241,3 +241,71 @@ grep 'Michał' students | grep ' 3'
 ### Wykonaj obliczenia za pomocą bc:
 echo "2 + 2" | bc
 echo "scale=2; 6.0 / 4.0" | bc
+
+# Potoki, strumienie i przekierowania (ii)
+
+## Operacje na plikach
+### 1. Otwórz w przeglądarce adresy podane w (jakimś) pliku [xargs]
+```bash
+xargs < lista_adresow.txt xdg-open
+
+### 2. Wyświetl częstotliwości taktowania wszystkich procesorów (w jednej linii) [/proc/cpuinfo xargs]
+cat /proc/cpuinfo | grep MHz | awk '{print $4}' | xargs
+
+### 3. Wygeneruj listę wszystkich słów które mają 8 liter, z których 3-cia to litera a, a ostatnią to literą jest y (do krzyżówki?). Wyświetl wyniki wielkimi literami. Zastosuj paginację lub przesuwanie wyników. [/usr/share/dict/words grep]
+grep -i '^..a..y$' /usr/share/dict/words | tr '[:lower:]' '[:upper:]' | less
+
+### 4. Wyświetl 20 losowych cyfr [/dev/urandom]
+head -c 20 /dev/urandom | tr -dc '0-9' | fold -w 20
+
+### 5. Wygeneruj 6 losowych 8-o znakowych haseł [fold]
+fold -w 8 /dev/urandom | head -n 6 | awk '{print toupper($0)}'
+
+### 6. Podaj nazwę użytkownika który jest zalogowany najdłużej/najkrócej [sort who]
+who | awk '{print $1}' | sort | uniq -c | sort -nr
+
+### 7. Wypisz adres fizyczny (MAC) karty sieciowej komputera [ifconfig grep]
+ifconfig | grep -oE '([0-9A-Fa-f]{2}:){5}([0-9A-Fa-f]{2})'
+
+### 8. Wypisz wszyskie adresy IP komputera [ifconfig grep]
+ifconfig | grep -oE '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b'
+
+### 9. Wypisz 5 najpopularniejszych komend z historii [.bash_history sort uniq]
+grep -v '^#' ~/.bash_history | sort | uniq -c | sort -nr | head -n 5
+
+### 10. Wypisz nazwy wszystkich zwykłych plików i linków w katalogu bieżącym [ls]
+ls -l | grep '^-' | awk '{print $9}'
+
+### 11. Sprawdź który z użytkowników otworzył najwięcej plików (i ile to ich jest) [lsof sort uniq]
+lsof | awk '{print $3}' | sort | uniq -c | sort -nr
+
+### 12. Wypisz 5 najpopularniejszych rozszerzeń plików (bez katalogów) w swoim katalogu domowym [ls sort uniq]
+ls -p ~ | grep -v / | awk -F . '{if (NF > 1) {print $NF}}' | sort | uniq -c | sort -nr | head -n 5
+
+### 13. Jak wyżej, tylko typy plików (mimetype) zamiast rozszerzeń [sort uniq file]
+file --mime-type * | awk '{print $2}' | sort | uniq -c | sort -nr
+
+### 14. Policz linie kodu we wszystkich plikach katalogu z projektem (znaki \n) [find wc xargs]
+find ./projekt -type f -exec cat {} + | wc -l
+
+### 15. Jak wyżej, tylko policz średniki zamiast znaków nowej linii. [find tr xargs]
+find ./projekt -type f -exec cat {} + | tr -cd ';' | wc -c
+
+### 16. Jak wyżej, tylko wypisz wiadomość na końcu z liczbą średników (np. “Semicolons: 644”) [echo wc xargs]
+echo "Semicolons: $(find ./projekt -type f -exec cat {} + | tr -cd ';' | wc -c)"
+
+### 17. Wypisz informacje o copyright ze wszystkich plików z kodem w katalogu (po rozszerzeniu) [find cat xargs]
+find ./kod -type f -exec cat {} + | grep -i copyright
+
+### 18. Policz wszystkie pliki ukryte w swoim katalogu domowym [grep ls wc]
+ls -a ~ | grep -v '^\.$' | grep '^\.' | wc -l
+
+### 19. Wypisz wartość 2^n dla n=1..100 [bc echo xargs]
+seq 1 100 | xargs -I{} echo "2^{}" | bc
+
+### 20. Wylicz średnią ocen dla każdego ze studentów w pliku przyklad.csv [xargs echo bc]
+awk -F, '{sum=0; for(i=2; i<=NF; i++) sum+=$i; print $1, sum/(NF-1)}' przyklad.csv
+
+### 21. Wypisz wszystkie pliki i katalogi z katalogu /proc do pliku tymczasowego (np. /tmp/proc.log) i na ekran, ale nie pokazuj błędów. Włącz paginację albo przemieszczanie się po wynikach. [find tee /dev/null]
+find /proc -maxdepth 1 -exec ls -d {} + 2>/dev/null | tee /tmp/proc.log | less
+
